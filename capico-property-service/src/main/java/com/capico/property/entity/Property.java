@@ -1,18 +1,13 @@
 package com.capico.property.entity;
 
-import com.capico.property.enums.FurnishingStatus;
-import com.capico.property.enums.ListingType;
+import com.capico.property.enums.PropertyCategory;
 import com.capico.property.enums.PropertyStatus;
 import com.capico.property.enums.PropertyType;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Digits;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
+
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -22,10 +17,6 @@ import java.time.LocalDateTime;
                 @Index(
                         name = "idx_properties_city",
                         columnList = "city"
-                ),
-                @Index(
-                        name = "idx_properties_owner_id",
-                        columnList = "owner_id"
                 ),
                 @Index(
                         name = "idx_properties_status",
@@ -38,25 +29,36 @@ public class Property {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long propertyId;
-    @NotNull(message = "Owner ID is required")
-    @Min(value = 1, message = "Owner ID must be greater than 0")
-    @Column(
-            name = "owner_id",
-            nullable = false
-    )
-    private Long ownerId;
-    @NotBlank(message = "Property title is required")
+
+    @NotBlank(message = "Property name is required")
     @Size(
             min = 5,
             max = 200,
-            message = "Property title must be between 5 and 200 characters"
+            message = "Property name must be between 5 and 200 characters"
     )
     @Column(
-            name = "title",
+            name = "property_name",
             nullable = false,
             length = 200
     )
-    private String title;
+    private String propertyName;
+
+    @NotNull(message = "Property type is required")
+    @Enumerated(EnumType.STRING)
+    @Column(
+            name = "property_type",
+            nullable = false
+    )
+    private PropertyType propertyType;
+
+    @NotNull(message = "Property category is required")
+    @Enumerated(EnumType.STRING)
+    @Column(
+            name = "property_category",
+            nullable = false
+    )
+    private PropertyCategory propertyCategory;
+
     @NotBlank(message = "Property description is required")
     @Size(
             min = 10,
@@ -64,114 +66,29 @@ public class Property {
             message = "Description must be between 10 and 2000 characters"
     )
     @Column(
-            name = "description",
+            name = "property_description",
             nullable = false,
             length = 2000
     )
-    private String description;
-    @NotNull(message = "Property type is required")
-    @Enumerated(EnumType.STRING)
-    @Column(
-            name = "property_type",
-            nullable = false,
-            length = 30
-    )
-    private PropertyType propertyType;
-    @NotNull(message = "Listing type is required")
-    @Enumerated(EnumType.STRING)
-    @Column(
-            name = "listing_type",
-            nullable = false,
-            length = 20
-    )
-    private ListingType listingType;
+    private String propertyDescription;
+
     @NotNull(message = "Property price is required")
     @DecimalMin(
             value = "1.00",
             message = "Property price must be greater than 0"
     )
-    @Digits(
-            integer = 13,
-            fraction = 2,
-            message = "Property price must contain up to 13 integer digits and 2 decimal places"
-    )
     @Column(
-            name = "price",
+            name = "property_price",
             nullable = false,
             precision = 15,
             scale = 2
     )
-    private BigDecimal price;
-    @NotBlank(message = "Property address is required")
-    @Size(
-            min = 5,
-            max = 300,
-            message = "Address must be between 5 and 300 characters"
-    )
-    @Column(
-            name = "address",
-            nullable = false,
-            length = 300
-    )
-    private String address;
-    @NotBlank(message = "City is required")
-    @Size(max = 100, message = "City cannot exceed 100 characters")
-    @Column(
-            name = "city",
-            nullable = false,
-            length = 100
-    )
-    private String city;
-    @NotBlank(message = "State is required")
-    @Size(max = 100, message = "State cannot exceed 100 characters")
-    @Column(
-            name = "state",
-            nullable = false,
-            length = 100
-    )
-    private String state;
-    @NotBlank(message = "Country is required")
-    @Size(max = 100, message = "Country cannot exceed 100 characters")
-    @Column(
-            name = "country",
-            nullable = false,
-            length = 100
-    )
-    private String country;
-    @NotBlank(message = "PIN code is required")
-    @Pattern(
-            regexp = "^[1-9][0-9]{5}$",
-            message = "PIN code must be a valid 6-digit Indian PIN code"
-    )
-    @Column(
-            name = "pin_code",
-            nullable = false,
-            length = 10
-    )
-    private String pinCode;
-    @NotNull(message = "Number of bedrooms is required")
-    @Min(value = 0, message = "Bedrooms cannot be negative")
-    @Column(
-            name = "bedrooms",
-            nullable = false
-    )
-    private Integer bedrooms;
-    @NotNull(message = "Number of bathrooms is required")
-    @Min(value = 0, message = "Bathrooms cannot be negative")
-    @Column(
-            name = "bathrooms",
-            nullable = false
-    )
-    private Integer bathrooms;
+    private BigDecimal propertyPrice;
+
     @NotNull(message = "Property area is required")
     @DecimalMin(
             value = "1.00",
             message = "Property area must be greater than 0"
-    )
-    @Digits(
-            integer = 10,
-            fraction = 2,
-            message = "Property area must contain up to 10 integer digits and 2 decimal places"
     )
     @Column(
             name = "area_sq_ft",
@@ -180,50 +97,79 @@ public class Property {
             scale = 2
     )
     private BigDecimal areaSqFt;
-    @NotNull(message = "Furnishing status is required")
-    @Enumerated(EnumType.STRING)
+
+    @NotBlank(message = "Address is required")
     @Column(
-            name = "furnishing_status",
+            name = "address",
             nullable = false,
-            length = 30
+            length = 300
     )
-    private FurnishingStatus furnishingStatus;
+    private String address;
+
+    @NotBlank(message = "City is required")
+    @Column(
+            name = "city",
+            nullable = false
+    )
+    private String city;
+
+    @NotBlank(message = "State is required")
+    @Column(
+            name = "state",
+            nullable = false
+    )
+    private String state;
+
+    @NotBlank(message = "Country is required")
+    @Column(
+            name = "country",
+            nullable = false
+    )
+    private String country;
+
+    @NotBlank(message = "Postal code is required")
+    @Pattern(
+            regexp = "^[1-9][0-9]{5}$",
+            message = "Postal code must be a valid 6-digit Indian PIN code"
+    )
+    @Column(
+            name = "postal_code",
+            nullable = false,
+            length = 6
+    )
+    private String postalCode;
+
+    @NotNull(message = "Available from date is required")
+    @Column(
+            name = "available_from",
+            nullable = false
+    )
+    private LocalDate availableFrom;
 
     @Enumerated(EnumType.STRING)
     @Column(
             name = "status",
-            nullable = false,
-            length = 20
+            nullable = false
     )
     private PropertyStatus status;
 
     @Column(
-            name = "created_at",
+            name = "created_date",
             nullable = false,
             updatable = false
     )
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    private LocalDateTime createdDate;
 
     public Property() {
     }
 
     @PrePersist
-    public void setDefaultValuesBeforeSaving() {
-
+    public void prePersist() {
         if (status == null) {
             status = PropertyStatus.AVAILABLE;
         }
 
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    public void updateTimestamp() {
-        updatedAt = LocalDateTime.now();
+        createdDate = LocalDateTime.now();
     }
 
     public Long getPropertyId() {
@@ -234,28 +180,12 @@ public class Property {
         this.propertyId = propertyId;
     }
 
-    public Long getOwnerId() {
-        return ownerId;
+    public String getPropertyName() {
+        return propertyName;
     }
 
-    public void setOwnerId(Long ownerId) {
-        this.ownerId = ownerId;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
+    public void setPropertyName(String propertyName) {
+        this.propertyName = propertyName;
     }
 
     public PropertyType getPropertyType() {
@@ -266,20 +196,36 @@ public class Property {
         this.propertyType = propertyType;
     }
 
-    public ListingType getListingType() {
-        return listingType;
+    public PropertyCategory getPropertyCategory() {
+        return propertyCategory;
     }
 
-    public void setListingType(ListingType listingType) {
-        this.listingType = listingType;
+    public void setPropertyCategory(PropertyCategory propertyCategory) {
+        this.propertyCategory = propertyCategory;
     }
 
-    public BigDecimal getPrice() {
-        return price;
+    public String getPropertyDescription() {
+        return propertyDescription;
     }
 
-    public void setPrice(BigDecimal price) {
-        this.price = price;
+    public void setPropertyDescription(String propertyDescription) {
+        this.propertyDescription = propertyDescription;
+    }
+
+    public BigDecimal getPropertyPrice() {
+        return propertyPrice;
+    }
+
+    public void setPropertyPrice(BigDecimal propertyPrice) {
+        this.propertyPrice = propertyPrice;
+    }
+
+    public BigDecimal getAreaSqFt() {
+        return areaSqFt;
+    }
+
+    public void setAreaSqFt(BigDecimal areaSqFt) {
+        this.areaSqFt = areaSqFt;
     }
 
     public String getAddress() {
@@ -314,46 +260,20 @@ public class Property {
         this.country = country;
     }
 
-    public String getPinCode() {
-        return pinCode;
+    public String getPostalCode() {
+        return postalCode;
     }
 
-    public void setPinCode(String pinCode) {
-        this.pinCode = pinCode;
+    public void setPostalCode(String postalCode) {
+        this.postalCode = postalCode;
     }
 
-    public Integer getBedrooms() {
-        return bedrooms;
+    public LocalDate getAvailableFrom() {
+        return availableFrom;
     }
 
-    public void setBedrooms(Integer bedrooms) {
-        this.bedrooms = bedrooms;
-    }
-
-    public Integer getBathrooms() {
-        return bathrooms;
-    }
-
-    public void setBathrooms(Integer bathrooms) {
-        this.bathrooms = bathrooms;
-    }
-
-    public BigDecimal getAreaSqFt() {
-        return areaSqFt;
-    }
-
-    public void setAreaSqFt(BigDecimal areaSqFt) {
-        this.areaSqFt = areaSqFt;
-    }
-
-    public FurnishingStatus getFurnishingStatus() {
-        return furnishingStatus;
-    }
-
-    public void setFurnishingStatus(
-            FurnishingStatus furnishingStatus
-    ) {
-        this.furnishingStatus = furnishingStatus;
+    public void setAvailableFrom(LocalDate availableFrom) {
+        this.availableFrom = availableFrom;
     }
 
     public PropertyStatus getStatus() {
@@ -364,19 +284,11 @@ public class Property {
         this.status = status;
     }
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
+    public LocalDateTime getCreatedDate() {
+        return createdDate;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
+    public void setCreatedDate(LocalDateTime createdDate) {
+        this.createdDate = createdDate;
     }
 }

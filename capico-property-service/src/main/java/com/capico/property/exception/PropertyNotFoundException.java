@@ -1,8 +1,11 @@
 package com.capico.property.exception;
 
-public class PropertyNotFoundException extends RuntimeException {
+public class PropertyNotFoundException
+        extends RuntimeException {
 
-    public PropertyNotFoundException(String message) {
+    public PropertyNotFoundException(
+            String message
+    ) {
         super(message);
     }
 }

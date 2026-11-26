@@ -3,66 +3,130 @@ package com.capico.property.exception;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(PropertyNotFoundException.class)
     public ResponseEntity<ErrorResponse> handlePropertyNotFoundException(
-            PropertyNotFoundException exception,
+            PropertyNotFoundException ex,
             HttpServletRequest request
     ) {
 
-        ErrorResponse errorResponse = new ErrorResponse(
-                LocalDateTime.now(),
-                HttpStatus.NOT_FOUND.value(),
-                HttpStatus.NOT_FOUND.getReasonPhrase(),
-                exception.getMessage(),
-                request.getRequestURI()
-        );
-
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(errorResponse);
-    }
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, Object>> handleValidationErrors(
-            MethodArgumentNotValidException exception,
-            HttpServletRequest request
-    ) {
-
-        Map<String, String> fieldErrors = new LinkedHashMap<>();
-
-        exception.getBindingResult()
-                .getFieldErrors()
-                .forEach(error ->
-                        fieldErrors.put(
-                                error.getField(),
-                                error.getDefaultMessage()
-                        )
+        ErrorResponse errorResponse =
+                new ErrorResponse(
+                        LocalDateTime.now(),
+                        HttpStatus.NOT_FOUND.value(),
+                        "Property Not Found",
+                        ex.getMessage(),
+                        request.getRequestURI()
                 );
 
-        Map<String, Object> response = new LinkedHashMap<>();
-
-        response.put("timestamp", LocalDateTime.now());
-        response.put("status", HttpStatus.BAD_REQUEST.value());
-        response.put(
-                "error",
-                HttpStatus.BAD_REQUEST.getReasonPhrase()
+        return new ResponseEntity<>(
+                errorResponse,
+                HttpStatus.NOT_FOUND
         );
-        response.put("message", "Request validation failed");
-        response.put("fieldErrors", fieldErrors);
-        response.put("path", request.getRequestURI());
+    }
 
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(response);
+    @ExceptionHandler(DuplicatePropertyException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicatePropertyException(
+            DuplicatePropertyException ex,
+            HttpServletRequest request
+    ) {
+
+        ErrorResponse errorResponse =
+                new ErrorResponse(
+                        LocalDateTime.now(),
+                        HttpStatus.CONFLICT.value(),
+                        "Duplicate Property",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                );
+
+        return new ResponseEntity<>(
+                errorResponse,
+                HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(InvalidRequestException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidRequestException(
+            InvalidRequestException ex,
+            HttpServletRequest request
+    ) {
+
+        ErrorResponse errorResponse =
+                new ErrorResponse(
+                        LocalDateTime.now(),
+                        HttpStatus.BAD_REQUEST.value(),
+                        "Invalid Request",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                );
+
+        return new ResponseEntity<>(
+                errorResponse,
+                HttpStatus.BAD_REQUEST
+        );
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, String>> handleValidationException(
+            MethodArgumentNotValidException ex
+    ) {
+
+        Map<String, String> errors =
+                new HashMap<>();
+
+        ex.getBindingResult()
+                .getAllErrors()
+                .forEach(error -> {
+
+                    String fieldName =
+                            ((FieldError) error)
+                                    .getField();
+
+                    String errorMessage =
+                            error.getDefaultMessage();
+
+                    errors.put(
+                            fieldName,
+                            errorMessage
+                    );
+                });
+
+        return new ResponseEntity<>(
+                errors,
+                HttpStatus.BAD_REQUEST
+        );
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleGlobalException(
+            Exception ex,
+            HttpServletRequest request
+    ) {
+
+        ErrorResponse errorResponse =
+                new ErrorResponse(
+                        LocalDateTime.now(),
+                        HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                        "Internal Server Error",
+                        ex.getMessage(),
+                        request.getRequestURI()
+                );
+
+        return new ResponseEntity<>(
+                errorResponse,
+                HttpStatus.INTERNAL_SERVER_ERROR
+        );
     }
 }
