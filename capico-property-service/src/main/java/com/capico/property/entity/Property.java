@@ -128,14 +128,19 @@ public class Property {
     private String country;
 
     @NotBlank(message = "Postal code is required")
+    @Size(
+            min = 3,
+            max = 20,
+            message = "Postal code must be between 3 and 20 characters"
+    )
     @Pattern(
-            regexp = "^[1-9][0-9]{5}$",
-            message = "Postal code must be a valid 6-digit Indian PIN code"
+            regexp = "^[A-Za-z0-9][A-Za-z0-9 -]*[A-Za-z0-9]$",
+            message = "Postal code may contain letters, numbers, spaces and hyphens"
     )
     @Column(
             name = "postal_code",
             nullable = false,
-            length = 6
+            length = 20
     )
     private String postalCode;
 

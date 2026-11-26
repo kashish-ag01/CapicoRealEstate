@@ -1,240 +1,248 @@
 package com.capico.user.service;
 
+import com.capico.user.dto.request.ChangePasswordRequest;
+import com.capico.user.dto.request.CreateUserRequest;
+import com.capico.user.dto.request.RegisterUserRequest;
+import com.capico.user.dto.request.UpdateUserRequest;
+import com.capico.user.dto.response.UserResponse;
 import com.capico.user.entity.User;
+import com.capico.user.enums.Role;
 import com.capico.user.enums.UserStatus;
-import com.capico.user.repository.UserRepository;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
-import com.capico.user.exception.UserNotFoundException;
 import com.capico.user.exception.DuplicateEmailException;
 import com.capico.user.exception.DuplicateMobileNumberException;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import com.capico.user.dto.request.CreateUserRequest;
-import com.capico.user.dto.response.UserResponse;
+import com.capico.user.exception.InvalidRequestException;
+import com.capico.user.exception.UnauthorizedException;
+import com.capico.user.exception.UserNotFoundException;
 import com.capico.user.mapper.UserMapper;
-import com.capico.user.dto.request.UpdateUserRequest;
-
-import com.capico.user.dto.request.ChangePasswordRequest;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.GrantedAuthority;
-
-import java.util.Collection;
+import com.capico.user.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import com.capico.user.enums.UserActivityType;
 import java.util.List;
-import com.capico.user.dto.response.UserSummaryResponse;
+import com.capico.user.enums.UserActivityType;
+
 @Service
+@Transactional
 public class UserService {
 
     private final UserRepository userRepository;
-
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
-
+    private final UserActivityService userActivityService;
     public UserService(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            UserMapper userMapper) {
-
+            UserMapper userMapper,
+            UserActivityService userActivityService
+    ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.userMapper = userMapper;
+        this.userActivityService = userActivityService;
     }
 
-    // CREATE
-    public UserResponse createUser(CreateUserRequest request) {
+    /*
+     * Public registration.
+     * The client cannot choose role or status.
+     */
+    public UserResponse registerUser(
+            RegisterUserRequest request
+    ) {
+        checkDuplicateEmail(request.getEmail());
+        checkDuplicateMobileNumber(request.getMobileNumber());
 
-        if (userRepository.existsByEmailIgnoreCase(request.getEmail())) {
-            throw new DuplicateEmailException(
-                    "User already exists with email: " + request.getEmail()
-            );
-        }
+        User user = new User();
 
-        if (userRepository.existsByMobileNumber(request.getMobileNumber())) {
-            throw new DuplicateMobileNumberException(
-                    "User already exists with mobile number: "
-                            + request.getMobileNumber()
-            );
-        }
+        user.setFirstName(request.getFirstName());
+        user.setLastName(request.getLastName());
+        user.setEmail(request.getEmail());
 
-        // DTO ko entity mein convert karta hai
-        User user = userMapper.toEntity(request);
-
-        // Plain password ko BCrypt hash mein convert karta hai
         user.setPassword(
                 passwordEncoder.encode(request.getPassword())
         );
 
-        User savedUser = userRepository.save(user);
+        user.setMobileNumber(request.getMobileNumber());
+        user.setGender(request.getGender());
+        user.setCity(request.getCity());
+        user.setState(request.getState());
+        user.setCountry(request.getCountry());
 
-        // Saved entity ko safe response DTO mein convert karta hai
+        user.setRole(Role.USER);
+        user.setStatus(UserStatus.ACTIVE);
+
+        User savedUser = userRepository.save(user);
+        userActivityService.record(
+                savedUser,
+                UserActivityType.USER_REGISTERED,
+                "User registered successfully"
+        );
+
         return userMapper.toResponse(savedUser);
     }
 
-    // READ ALL
-    public List<UserResponse> getAllUsers() {
+    /*
+     * Administrator-only creation.
+     * Protect the controller endpoint with ADMIN authorization.
+     */
+    public UserResponse createUser(
+            CreateUserRequest request
+    ) {
+        checkDuplicateEmail(request.getEmail());
+        checkDuplicateMobileNumber(
+                request.getMobileNumber()
+        );
 
+        User user = new User();
+
+        user.setFirstName(request.getFirstName());
+        user.setLastName(request.getLastName());
+        user.setEmail(request.getEmail());
+
+        user.setPassword(
+                passwordEncoder.encode(
+                        request.getPassword()
+                )
+        );
+
+        user.setMobileNumber(
+                request.getMobileNumber()
+        );
+
+        user.setGender(request.getGender());
+        user.setCity(request.getCity());
+        user.setState(request.getState());
+        user.setCountry(request.getCountry());
+
+        user.setRole(request.getRole());
+        user.setStatus(request.getStatus());
+
+        User savedUser =
+                userRepository.save(user);
+
+        userActivityService.record(
+                savedUser,
+                UserActivityType.USER_CREATED_BY_ADMIN,
+                "User account created by administrator"
+        );
+
+        return userMapper.toResponse(savedUser);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserResponse> getAllUsers() {
         return userRepository.findAll()
                 .stream()
                 .map(userMapper::toResponse)
                 .toList();
     }
 
-    // READ BY ID
-    public UserResponse getUserById(Long id) {
-
-        User user = userRepository.findById(id)
-                .orElseThrow(() ->
-                        new UserNotFoundException(
-                                "User not found with ID: " + id
-                        )
-                );
-
-        return userMapper.toResponse(user);
-    }// READ LOGGED-IN USER BY EMAIL
-    public UserResponse getUserByEmail(String email) {
-
-        User user = userRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() ->
-                        new UserNotFoundException(
-                                "User not found with email: " + email
-                        )
-                );
+    @Transactional(readOnly = true)
+    public UserResponse getUserById(Long userId) {
+        User user = findUserById(userId);
 
         return userMapper.toResponse(user);
     }
 
-    // UPDATE
-    // UPDATE USER
-// USER can update own account.
-// ADMIN can update any account.
-    public UserResponse updateUser(
-            Long id,
-            UpdateUserRequest request,
+    @Transactional(readOnly = true)
+    public UserResponse getUserByEmail(String email) {
+        User user = findUserByEmail(email);
+
+        return userMapper.toResponse(user);
+    }
+
+    /*
+     * The authenticated user updates only their own profile.
+     * Role, status, email and password are not changed here.
+     */
+    public UserResponse updateCurrentUser(
             String authenticatedEmail,
-            Collection<? extends GrantedAuthority> authorities
+            UpdateUserRequest request
     ) {
+        User user = findUserByEmail(authenticatedEmail);
 
-        User existingUser = userRepository.findById(id)
-                .orElseThrow(() ->
-                        new UserNotFoundException(
-                                "User not found with ID: " + id
-                        )
+        boolean mobileAlreadyUsed =
+                userRepository.existsByMobileNumberAndUserIdNot(
+                        request.getMobileNumber(),
+                        user.getUserId()
                 );
 
-        User authenticatedUser = userRepository
-                .findByEmailIgnoreCase(authenticatedEmail)
-                .orElseThrow(() ->
-                        new UserNotFoundException(
-                                "Authenticated user not found: "
-                                        + authenticatedEmail
-                        )
-                );
-
-        boolean isAdmin = authorities.stream()
-                .anyMatch(authority ->
-                        authority.getAuthority()
-                                .equals("ROLE_ADMIN")
-                );
-
-        boolean isOwner = authenticatedUser
-                .getUserId()
-                .equals(id);
-
-        if (!isAdmin && !isOwner) {
-            throw new AccessDeniedException(
-                    "You cannot update another user's account"
-            );
-        }
-
-        // Check whether another user has the requested email
-        if (userRepository.existsByEmailIgnoreCaseAndUserIdNot(
-                request.getEmail(),
-                id
-        )) {
-            throw new DuplicateEmailException(
-                    "Another user already exists with email: "
-                            + request.getEmail()
-            );
-        }
-
-        // Check whether another user has the requested mobile number
-        if (userRepository.existsByMobileNumberAndUserIdNot(
-                request.getMobileNumber(),
-                id
-        )) {
+        if (mobileAlreadyUsed) {
             throw new DuplicateMobileNumberException(
                     "Another user already exists with mobile number: "
                             + request.getMobileNumber()
             );
         }
 
-        userMapper.updateEntity(request, existingUser);
+        user.setFirstName(request.getFirstName());
+        user.setLastName(request.getLastName());
+        user.setMobileNumber(request.getMobileNumber());
+        user.setGender(request.getGender());
+        user.setCity(request.getCity());
+        user.setState(request.getState());
+        user.setCountry(request.getCountry());
 
-        /*
-         * Password update yahan nahi karenge.
-         * Password ke liye separate /me/password endpoint hai.
-         */
+        User updatedUser = userRepository.save(user);
 
-        User savedUser = userRepository.save(existingUser);
+        userActivityService.record(
+                updatedUser,
+                UserActivityType.PROFILE_UPDATED,
+                "User profile updated"
+        );
 
-        return userMapper.toResponse(savedUser);
+        return userMapper.toResponse(updatedUser);
     }
 
-    // DELETE
-    public void deleteUser(Long id) {
+    /*
+     * Administrator-only deletion.
+     */
+    public void deleteUser(Long userId) {
+        User user = findUserById(userId);
 
-        if (!userRepository.existsById(id)) {
-            throw new UserNotFoundException(
-                    "User not found with ID: " + id
-            );
-        }
+        userActivityService.record(
+                user,
+                UserActivityType.USER_DELETED,
+                "User account deleted by administrator"
+        );
 
-        userRepository.deleteById(id);
+        userRepository.delete(user);
     }
-    // LOGGED-IN USER CHANGES OWN PASSWORD
+
     public void changePassword(
             String authenticatedEmail,
             ChangePasswordRequest request
     ) {
+        User user = findUserByEmail(authenticatedEmail);
 
-        User user = userRepository
-                .findByEmailIgnoreCase(authenticatedEmail)
-                .orElseThrow(() ->
-                        new UserNotFoundException(
-                                "User not found with email: "
-                                        + authenticatedEmail
-                        )
+        boolean currentPasswordMatches =
+                passwordEncoder.matches(
+                        request.getCurrentPassword(),
+                        user.getPassword()
                 );
 
-        // Verify current password
-        if (!passwordEncoder.matches(
-                request.getCurrentPassword(),
-                user.getPassword()
-        )) {
-            throw new ResponseStatusException(
-                    HttpStatus.UNAUTHORIZED,
+        if (!currentPasswordMatches) {
+            throw new UnauthorizedException(
                     "Current password is incorrect"
             );
         }
 
-        // Verify confirmation
-        if (!request.getNewPassword()
-                .equals(request.getConfirmPassword())) {
-
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
+        if (!request.getNewPassword().equals(
+                request.getConfirmPassword()
+        )) {
+            throw new InvalidRequestException(
                     "New password and confirm password do not match"
             );
         }
 
-        // New password must differ from current password
-        if (passwordEncoder.matches(
-                request.getNewPassword(),
-                user.getPassword()
-        )) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "New password must be different from current password"
+        boolean sameAsCurrentPassword =
+                passwordEncoder.matches(
+                        request.getNewPassword(),
+                        user.getPassword()
+                );
+
+        if (sameAsCurrentPassword) {
+            throw new InvalidRequestException(
+                    "New password must be different from the current password"
             );
         }
 
@@ -245,76 +253,128 @@ public class UserService {
         );
 
         userRepository.save(user);
+        userActivityService.record(
+                user,
+                UserActivityType.PASSWORD_CHANGED,
+                "User password changed"
+        );
     }
-    public User login(String email, String password) {
 
-        User user = userRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.UNAUTHORIZED,
-                        "Invalid email or password"
-                ));
+    @Transactional(readOnly = true)
+    public User login(
+            String email,
+            String plainPassword
+    ) {
+        User user = userRepository
+                .findByEmailIgnoreCase(normalizeEmail(email))
+                .orElseThrow(() ->
+                        new UnauthorizedException(
+                                "Invalid email or password"
+                        )
+                );
 
-        if (user.getPassword() == null ||
-                !passwordEncoder.matches(password, user.getPassword())) {
-
-            throw new ResponseStatusException(
-                    HttpStatus.UNAUTHORIZED,
+        if (user.getPassword() == null
+                || !passwordEncoder.matches(
+                plainPassword,
+                user.getPassword()
+        )) {
+            throw new UnauthorizedException(
                     "Invalid email or password"
             );
         }
+
         if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
+            throw new UnauthorizedException(
                     "User account is inactive"
             );
         }
+        userActivityService.record(
+                user,
+                UserActivityType.LOGIN_SUCCESS,
+                "User logged in successfully"
+        );
 
         return user;
     }
-    public UserSummaryResponse getInternalUser(
-            Long userId
+
+    /*
+     * Administrator changes another user's role or status.
+     */
+    public UserResponse updateUserAccess(
+            Long userId,
+            Role role,
+            UserStatus status
     ) {
+        User user = findUserById(userId);
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(
-                        () -> new RuntimeException(
-                                "User not found"
-                        )
-                );
+        if (role == null) {
+            throw new InvalidRequestException(
+                    "Role is required"
+            );
+        }
 
-        UserSummaryResponse response =
-                new UserSummaryResponse();
+        if (status == null) {
+            throw new InvalidRequestException(
+                    "Status is required"
+            );
+        }
 
-        response.setUserId(user.getUserId());
-        response.setFirstName(user.getFirstName());
-        response.setLastName(user.getLastName());
-        response.setEmail(user.getEmail());
-        response.setRole(
-                user.getRole().name()
-        );
-        response.setStatus(
-                user.getStatus().name()
-        );
+        user.setRole(role);
+        user.setStatus(status);
 
-        return response;
+        User updatedUser = userRepository.save(user);
+
+        return userMapper.toResponse(updatedUser);
     }
-    public UserSummaryResponse getInternalUser(Long userId) {
 
-        User user = userRepository.findById(userId)
+    private User findUserById(Long userId) {
+        return userRepository.findById(userId)
                 .orElseThrow(() ->
-                        new RuntimeException(
+                        new UserNotFoundException(
                                 "User not found with ID: " + userId
                         )
                 );
-
-        return new UserSummaryResponse(
-                user.getUserId(),
-                user.getFirstName(),
-                user.getLastName(),
-                user.getEmail(),
-                user.getRole().name(),
-                user.getStatus().name()
-        );
     }
 
+    private User findUserByEmail(String email) {
+        return userRepository
+                .findByEmailIgnoreCase(normalizeEmail(email))
+                .orElseThrow(() ->
+                        new UserNotFoundException(
+                                "User not found with email: " + email
+                        )
+                );
+    }
+
+    private void checkDuplicateEmail(String email) {
+        String normalizedEmail = normalizeEmail(email);
+
+        if (userRepository.existsByEmailIgnoreCase(
+                normalizedEmail
+        )) {
+            throw new DuplicateEmailException(
+                    "User already exists with email: "
+                            + normalizedEmail
+            );
+        }
+    }
+
+    private void checkDuplicateMobileNumber(
+            String mobileNumber
+    ) {
+        if (userRepository.existsByMobileNumber(
+                mobileNumber
+        )) {
+            throw new DuplicateMobileNumberException(
+                    "User already exists with mobile number: "
+                            + mobileNumber
+            );
+        }
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null
+                ? null
+                : email.trim().toLowerCase();
+    }
 }

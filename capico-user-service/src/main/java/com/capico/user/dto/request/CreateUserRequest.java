@@ -12,26 +12,41 @@ import jakarta.validation.constraints.Size;
 public class CreateUserRequest {
 
     @NotBlank(message = "First name is required")
-    @Size(max = 50, message = "First name cannot exceed 50 characters")
+    @Size(
+            min = 2,
+            max = 100,
+            message = "First name must contain between 2 and 100 characters"
+    )
     private String firstName;
 
     @NotBlank(message = "Last name is required")
-    @Size(max = 50, message = "Last name cannot exceed 50 characters")
+    @Size(
+            min = 2,
+            max = 100,
+            message = "Last name must contain between 2 and 100 characters"
+    )
     private String lastName;
 
     @NotBlank(message = "Email is required")
     @Email(message = "Enter a valid email address")
+    @Size(
+            max = 150,
+            message = "Email cannot exceed 150 characters"
+    )
     private String email;
 
     @NotBlank(message = "Password is required")
-    @Size(min = 8, max = 72,
-            message = "Password must contain between 8 and 72 characters")
+    @Size(
+            min = 8,
+            max = 72,
+            message = "Password must contain between 8 and 72 characters"
+    )
     private String password;
 
     @NotBlank(message = "Mobile number is required")
     @Pattern(
-            regexp = "^[6-9][0-9]{9}$",
-            message = "Enter a valid 10-digit Indian mobile number"
+            regexp = "^[0-9]{10}$",
+            message = "Mobile number must contain exactly 10 digits"
     )
     private String mobileNumber;
 
@@ -39,12 +54,24 @@ public class CreateUserRequest {
     private Gender gender;
 
     @NotBlank(message = "City is required")
+    @Size(
+            max = 100,
+            message = "City cannot exceed 100 characters"
+    )
     private String city;
 
     @NotBlank(message = "State is required")
+    @Size(
+            max = 100,
+            message = "State cannot exceed 100 characters"
+    )
     private String state;
 
     @NotBlank(message = "Country is required")
+    @Size(
+            max = 100,
+            message = "Country cannot exceed 100 characters"
+    )
     private String country;
 
     @NotNull(message = "Role is required")
@@ -52,6 +79,9 @@ public class CreateUserRequest {
 
     @NotNull(message = "Status is required")
     private UserStatus status;
+
+    public CreateUserRequest() {
+    }
 
     public String getFirstName() {
         return firstName;

@@ -26,10 +26,10 @@ public class RegisterUserRequest {
     private String lastName;
 
     @NotBlank(message = "Email is required")
-    @Email(message = "Email address is not valid")
+    @Email(message = "Enter a valid email address")
     @Size(
             max = 150,
-            message = "Email must not exceed 150 characters"
+            message = "Email cannot exceed 150 characters"
     )
     private String email;
 
@@ -53,51 +53,26 @@ public class RegisterUserRequest {
 
     @NotBlank(message = "City is required")
     @Size(
-            min = 2,
             max = 100,
-            message = "City must contain between 2 and 100 characters"
+            message = "City cannot exceed 100 characters"
     )
     private String city;
 
     @NotBlank(message = "State is required")
     @Size(
-            min = 2,
             max = 100,
-            message = "State must contain between 2 and 100 characters"
+            message = "State cannot exceed 100 characters"
     )
     private String state;
 
     @NotBlank(message = "Country is required")
     @Size(
-            min = 2,
             max = 100,
-            message = "Country must contain between 2 and 100 characters"
+            message = "Country cannot exceed 100 characters"
     )
     private String country;
 
     public RegisterUserRequest() {
-    }
-
-    public RegisterUserRequest(
-            String firstName,
-            String lastName,
-            String email,
-            String password,
-            String mobileNumber,
-            Gender gender,
-            String city,
-            String state,
-            String country
-    ) {
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.email = email;
-        this.password = password;
-        this.mobileNumber = mobileNumber;
-        this.gender = gender;
-        this.city = city;
-        this.state = state;
-        this.country = country;
     }
 
     public String getFirstName() {

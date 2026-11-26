@@ -3,7 +3,7 @@ package com.capico.user.entity;
 import com.capico.user.enums.Gender;
 import com.capico.user.enums.Role;
 import com.capico.user.enums.UserStatus;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -11,7 +11,6 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Email;
@@ -19,97 +18,118 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+
 import java.time.LocalDateTime;
 
 @Entity
-@Table(
-        name = "users",
-        indexes = {
-                @Index(
-                        name = "idx_users_email",
-                        columnList = "email",
-                        unique = true
-                )
-        }
-)
+@Table(name = "users")
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "user_id")
     private Long userId;
+
     @NotBlank(message = "First name is required")
-    @Size(min = 2, max = 100, message = "First name must be between 2 and 100 characters")
+    @Size(
+            min = 2,
+            max = 100,
+            message = "First name must contain between 2 and 100 characters"
+    )
     @Column(
             name = "first_name",
             nullable = false,
             length = 100
     )
     private String firstName;
+
     @NotBlank(message = "Last name is required")
-    @Size(min = 2, max = 100, message = "Last name must be between 2 and 100 characters")
+    @Size(
+            min = 2,
+            max = 100,
+            message = "Last name must contain between 2 and 100 characters"
+    )
     @Column(
             name = "last_name",
             nullable = false,
             length = 100
     )
     private String lastName;
+
     @NotBlank(message = "Email is required")
-    @Email(message = "Please enter a valid email address")
-    @Size(max = 150, message = "Email cannot exceed 150 characters")
+    @Email(message = "Enter a valid email address")
+    @Size(
+            max = 150,
+            message = "Email cannot exceed 150 characters"
+    )
     @Column(
             name = "email",
             nullable = false,
             unique = true,
             length = 150
     )
-
     private String email;
+
     @NotBlank(message = "Password is required")
-    @Size(min = 8, max = 255, message = "Password must contain at least 8 characters")
     @Column(
             name = "password",
             nullable = false,
             length = 255
     )
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @JsonIgnore
     private String password;
+
     @NotBlank(message = "Mobile number is required")
     @Pattern(
-            regexp = "^[6-9][0-9]{9}$",
-            message = "Mobile number must be a valid 10-digit Indian mobile number"
+            regexp = "^[0-9]{10}$",
+            message = "Mobile number must contain exactly 10 digits"
     )
     @Column(
             name = "mobile_number",
             nullable = false,
-            length = 15
+            unique = true,
+            length = 10
     )
     private String mobileNumber;
+
     @NotNull(message = "Gender is required")
     @Enumerated(EnumType.STRING)
     @Column(
             name = "gender",
             nullable = false,
-            length = 30
+            length = 20
     )
     private Gender gender;
+
     @NotBlank(message = "City is required")
-    @Size(max = 100, message = "City cannot exceed 100 characters")
+    @Size(
+            max = 100,
+            message = "City cannot exceed 100 characters"
+    )
     @Column(
             name = "city",
             nullable = false,
             length = 100
     )
     private String city;
+
     @NotBlank(message = "State is required")
-    @Size(max = 100, message = "State cannot exceed 100 characters")
+    @Size(
+            max = 100,
+            message = "State cannot exceed 100 characters"
+    )
     @Column(
             name = "state",
             nullable = false,
             length = 100
     )
     private String state;
+
     @NotBlank(message = "Country is required")
-    @Size(max = 100, message = "Country cannot exceed 100 characters")
+    @Size(
+            max = 100,
+            message = "Country cannot exceed 100 characters"
+    )
     @Column(
             name = "country",
             nullable = false,
@@ -117,6 +137,7 @@ public class User {
     )
     private String country;
 
+    @NotNull(message = "Role is required")
     @Enumerated(EnumType.STRING)
     @Column(
             name = "role",
@@ -125,6 +146,7 @@ public class User {
     )
     private Role role;
 
+    @NotNull(message = "Status is required")
     @Enumerated(EnumType.STRING)
     @Column(
             name = "status",
@@ -134,48 +156,17 @@ public class User {
     private UserStatus status;
 
     @Column(
-            name = "created_at",
+            name = "created_date",
             nullable = false,
             updatable = false
     )
-    private LocalDateTime createdAt;
+    private LocalDateTime createdDate;
 
     public User() {
     }
 
-    public User(
-            Long userId,
-            String firstName,
-            String lastName,
-            String email,
-            String password,
-            String mobileNumber,
-            Gender gender,
-            String city,
-            String state,
-            String country,
-            Role role,
-            UserStatus status,
-            LocalDateTime createdAt
-    ) {
-        this.userId = userId;
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.email = email;
-        this.password = password;
-        this.mobileNumber = mobileNumber;
-        this.gender = gender;
-        this.city = city;
-        this.state = state;
-        this.country = country;
-        this.role = role;
-        this.status = status;
-        this.createdAt = createdAt;
-    }
-
     @PrePersist
-    public void setDefaultValuesBeforeSaving() {
-
+    public void beforeSaving() {
         if (role == null) {
             role = Role.USER;
         }
@@ -184,11 +175,10 @@ public class User {
             status = UserStatus.ACTIVE;
         }
 
-        if (createdAt == null) {
-            createdAt = LocalDateTime.now();
+        if (createdDate == null) {
+            createdDate = LocalDateTime.now();
         }
     }
-
 
     public Long getUserId() {
         return userId;
@@ -203,7 +193,7 @@ public class User {
     }
 
     public void setFirstName(String firstName) {
-        this.firstName = firstName;
+        this.firstName = trim(firstName);
     }
 
     public String getLastName() {
@@ -211,7 +201,7 @@ public class User {
     }
 
     public void setLastName(String lastName) {
-        this.lastName = lastName;
+        this.lastName = trim(lastName);
     }
 
     public String getEmail() {
@@ -219,7 +209,11 @@ public class User {
     }
 
     public void setEmail(String email) {
-        this.email = email;
+        if (email == null) {
+            this.email = null;
+        } else {
+            this.email = email.trim().toLowerCase();
+        }
     }
 
     public String getPassword() {
@@ -235,7 +229,7 @@ public class User {
     }
 
     public void setMobileNumber(String mobileNumber) {
-        this.mobileNumber = mobileNumber;
+        this.mobileNumber = trim(mobileNumber);
     }
 
     public Gender getGender() {
@@ -251,7 +245,7 @@ public class User {
     }
 
     public void setCity(String city) {
-        this.city = city;
+        this.city = trim(city);
     }
 
     public String getState() {
@@ -259,7 +253,7 @@ public class User {
     }
 
     public void setState(String state) {
-        this.state = state;
+        this.state = trim(state);
     }
 
     public String getCountry() {
@@ -267,7 +261,7 @@ public class User {
     }
 
     public void setCountry(String country) {
-        this.country = country;
+        this.country = trim(country);
     }
 
     public Role getRole() {
@@ -286,11 +280,15 @@ public class User {
         this.status = status;
     }
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
+    public LocalDateTime getCreatedDate() {
+        return createdDate;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
+    public void setCreatedDate(LocalDateTime createdDate) {
+        this.createdDate = createdDate;
+    }
+
+    private String trim(String value) {
+        return value == null ? null : value.trim();
     }
 }

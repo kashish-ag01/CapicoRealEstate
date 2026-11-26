@@ -1,9 +1,6 @@
 package com.capico.user.dto.request;
 
 import com.capico.user.enums.Gender;
-import com.capico.user.enums.Role;
-import com.capico.user.enums.UserStatus;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -12,29 +9,25 @@ import jakarta.validation.constraints.Size;
 public class UpdateUserRequest {
 
     @NotBlank(message = "First name is required")
-    @Size(max = 50, message = "First name cannot exceed 50 characters")
+    @Size(
+            min = 2,
+            max = 100,
+            message = "First name must contain between 2 and 100 characters"
+    )
     private String firstName;
 
     @NotBlank(message = "Last name is required")
-    @Size(max = 50, message = "Last name cannot exceed 50 characters")
-    private String lastName;
-
-    @NotBlank(message = "Email is required")
-    @Email(message = "Enter a valid email address")
-    private String email;
-
-    // Optional during update
     @Size(
-            min = 8,
-            max = 72,
-            message = "Password must contain between 8 and 72 characters"
+            min = 2,
+            max = 100,
+            message = "Last name must contain between 2 and 100 characters"
     )
-    private String password;
+    private String lastName;
 
     @NotBlank(message = "Mobile number is required")
     @Pattern(
-            regexp = "^[6-9][0-9]{9}$",
-            message = "Enter a valid 10-digit Indian mobile number"
+            regexp = "^[0-9]{10}$",
+            message = "Mobile number must contain exactly 10 digits"
     )
     private String mobileNumber;
 
@@ -42,19 +35,28 @@ public class UpdateUserRequest {
     private Gender gender;
 
     @NotBlank(message = "City is required")
+    @Size(
+            max = 100,
+            message = "City cannot exceed 100 characters"
+    )
     private String city;
 
     @NotBlank(message = "State is required")
+    @Size(
+            max = 100,
+            message = "State cannot exceed 100 characters"
+    )
     private String state;
 
     @NotBlank(message = "Country is required")
+    @Size(
+            max = 100,
+            message = "Country cannot exceed 100 characters"
+    )
     private String country;
 
-    @NotNull(message = "Role is required")
-    private Role role;
-
-    @NotNull(message = "Status is required")
-    private UserStatus status;
+    public UpdateUserRequest() {
+    }
 
     public String getFirstName() {
         return firstName;
@@ -70,22 +72,6 @@ public class UpdateUserRequest {
 
     public void setLastName(String lastName) {
         this.lastName = lastName;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
     }
 
     public String getMobileNumber() {
@@ -126,21 +112,5 @@ public class UpdateUserRequest {
 
     public void setCountry(String country) {
         this.country = country;
-    }
-
-    public Role getRole() {
-        return role;
-    }
-
-    public void setRole(Role role) {
-        this.role = role;
-    }
-
-    public UserStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(UserStatus status) {
-        this.status = status;
     }
 }

@@ -15,19 +15,31 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByEmailIgnoreCase(String email);
 
-    Optional<User> findByMobileNumber(String mobileNumber);
-
-    boolean existsByMobileNumber(String mobileNumber);
-
-    List<User> findAllByStatus(UserStatus status);
     boolean existsByEmailIgnoreCaseAndUserIdNot(
             String email,
             Long userId
     );
+
+    Optional<User> findByMobileNumber(String mobileNumber);
+
+    boolean existsByMobileNumber(String mobileNumber);
 
     boolean existsByMobileNumberAndUserIdNot(
             String mobileNumber,
             Long userId
     );
 
+    List<User> findAllByStatus(UserStatus status);
+
+    Optional<User> findByUserIdAndStatus(
+            Long userId,
+            UserStatus status
+    );
+
+    Optional<User> findByEmailIgnoreCaseAndStatus(
+            String email,
+            UserStatus status
+    );
+
+    long countByStatus(UserStatus status);
 }

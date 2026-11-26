@@ -4,129 +4,151 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
+import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(PropertyNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handlePropertyNotFoundException(
+    public ResponseEntity<ErrorResponse>
+    handlePropertyNotFoundException(
             PropertyNotFoundException ex,
             HttpServletRequest request
     ) {
-
-        ErrorResponse errorResponse =
-                new ErrorResponse(
-                        LocalDateTime.now(),
-                        HttpStatus.NOT_FOUND.value(),
-                        "Property Not Found",
-                        ex.getMessage(),
-                        request.getRequestURI()
-                );
-
-        return new ResponseEntity<>(
-                errorResponse,
-                HttpStatus.NOT_FOUND
+        return buildErrorResponse(
+                HttpStatus.NOT_FOUND,
+                ex.getMessage(),
+                request.getRequestURI()
         );
     }
 
     @ExceptionHandler(DuplicatePropertyException.class)
-    public ResponseEntity<ErrorResponse> handleDuplicatePropertyException(
+    public ResponseEntity<ErrorResponse>
+    handleDuplicatePropertyException(
             DuplicatePropertyException ex,
             HttpServletRequest request
     ) {
+        return buildErrorResponse(
+                HttpStatus.CONFLICT,
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+    }
 
-        ErrorResponse errorResponse =
-                new ErrorResponse(
-                        LocalDateTime.now(),
-                        HttpStatus.CONFLICT.value(),
-                        "Duplicate Property",
-                        ex.getMessage(),
-                        request.getRequestURI()
-                );
-
-        return new ResponseEntity<>(
-                errorResponse,
-                HttpStatus.CONFLICT
+    @ExceptionHandler(ValidationException.class)
+    public ResponseEntity<ErrorResponse>
+    handleValidationException(
+            ValidationException ex,
+            HttpServletRequest request
+    ) {
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                ex.getMessage(),
+                request.getRequestURI()
         );
     }
 
     @ExceptionHandler(InvalidRequestException.class)
-    public ResponseEntity<ErrorResponse> handleInvalidRequestException(
+    public ResponseEntity<ErrorResponse>
+    handleInvalidRequestException(
             InvalidRequestException ex,
             HttpServletRequest request
     ) {
-
-        ErrorResponse errorResponse =
-                new ErrorResponse(
-                        LocalDateTime.now(),
-                        HttpStatus.BAD_REQUEST.value(),
-                        "Invalid Request",
-                        ex.getMessage(),
-                        request.getRequestURI()
-                );
-
-        return new ResponseEntity<>(
-                errorResponse,
-                HttpStatus.BAD_REQUEST
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                ex.getMessage(),
+                request.getRequestURI()
         );
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidationException(
-            MethodArgumentNotValidException ex
+    public ResponseEntity<ErrorResponse>
+    handleMethodArgumentNotValidException(
+            MethodArgumentNotValidException ex,
+            HttpServletRequest request
     ) {
+        List<String> validationMessages =
+                new ArrayList<>();
 
-        Map<String, String> errors =
-                new HashMap<>();
+        for (FieldError fieldError
+                : ex.getBindingResult().getFieldErrors()) {
 
-        ex.getBindingResult()
-                .getAllErrors()
-                .forEach(error -> {
+            String message =
+                    fieldError.getDefaultMessage() == null
+                            ? "Invalid value"
+                            : fieldError.getDefaultMessage();
 
-                    String fieldName =
-                            ((FieldError) error)
-                                    .getField();
+            validationMessages.add(
+                    fieldError.getField() + ": " + message
+            );
+        }
 
-                    String errorMessage =
-                            error.getDefaultMessage();
+        for (ObjectError objectError
+                : ex.getBindingResult().getGlobalErrors()) {
 
-                    errors.put(
-                            fieldName,
-                            errorMessage
-                    );
-                });
+            String message =
+                    objectError.getDefaultMessage() == null
+                            ? "Invalid request"
+                            : objectError.getDefaultMessage();
 
-        return new ResponseEntity<>(
-                errors,
-                HttpStatus.BAD_REQUEST
+            validationMessages.add(message);
+        }
+
+        String message;
+
+        if (validationMessages.isEmpty()) {
+            message = "Request validation failed";
+        } else {
+            message = String.join(
+                    "; ",
+                    validationMessages
+            );
+        }
+
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                message,
+                request.getRequestURI()
         );
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGlobalException(
+    public ResponseEntity<ErrorResponse>
+    handleUnexpectedException(
             Exception ex,
             HttpServletRequest request
     ) {
+        return buildErrorResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "An unexpected internal server error occurred",
+                request.getRequestURI()
+        );
+    }
 
+    private ResponseEntity<ErrorResponse>
+    buildErrorResponse(
+            HttpStatus status,
+            String message,
+            String path
+    ) {
         ErrorResponse errorResponse =
                 new ErrorResponse(
                         LocalDateTime.now(),
-                        HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                        "Internal Server Error",
-                        ex.getMessage(),
-                        request.getRequestURI()
+                        status.value(),
+                        status.getReasonPhrase(),
+                        message,
+                        path
                 );
 
-        return new ResponseEntity<>(
-                errorResponse,
-                HttpStatus.INTERNAL_SERVER_ERROR
-        );
+        return ResponseEntity
+                .status(status)
+                .body(errorResponse);
     }
 }

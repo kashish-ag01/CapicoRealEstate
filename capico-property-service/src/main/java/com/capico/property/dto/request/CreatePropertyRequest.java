@@ -2,10 +2,12 @@ package com.capico.property.dto.request;
 
 import com.capico.property.enums.PropertyCategory;
 import com.capico.property.enums.PropertyType;
-import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -13,6 +15,11 @@ import java.time.LocalDate;
 public class CreatePropertyRequest {
 
     @NotBlank(message = "Property name is required")
+    @Size(
+            min = 5,
+            max = 200,
+            message = "Property name must be between 5 and 200 characters"
+    )
     private String propertyName;
 
     @NotNull(message = "Property type is required")
@@ -22,32 +29,60 @@ public class CreatePropertyRequest {
     private PropertyCategory propertyCategory;
 
     @NotBlank(message = "Property description is required")
+    @Size(
+            min = 10,
+            max = 2000,
+            message = "Property description must be between 10 and 2000 characters"
+    )
     private String propertyDescription;
 
     @NotNull(message = "Property price is required")
-    @DecimalMin(value = "1.00", message = "Property price must be greater than 0")
+    @Positive(message = "Property price must be greater than zero")
+    @Digits(
+            integer = 13,
+            fraction = 2,
+            message = "Property price can contain up to 13 integer digits and 2 decimal places"
+    )
     private BigDecimal propertyPrice;
 
     @NotNull(message = "Property area is required")
-    @DecimalMin(value = "1.00", message = "Property area must be greater than 0")
+    @Positive(message = "Property area must be greater than zero")
+    @Digits(
+            integer = 10,
+            fraction = 2,
+            message = "Property area can contain up to 10 integer digits and 2 decimal places"
+    )
     private BigDecimal areaSqFt;
 
-    @NotBlank(message = "Address is required")
+    @NotBlank(message = "Property address is required")
+    @Size(
+            min = 5,
+            max = 300,
+            message = "Address must be between 5 and 300 characters"
+    )
     private String address;
 
     @NotBlank(message = "City is required")
+    @Size(max = 100, message = "City cannot exceed 100 characters")
     private String city;
 
     @NotBlank(message = "State is required")
+    @Size(max = 100, message = "State cannot exceed 100 characters")
     private String state;
 
     @NotBlank(message = "Country is required")
+    @Size(max = 100, message = "Country cannot exceed 100 characters")
     private String country;
 
     @NotBlank(message = "Postal code is required")
+    @Size(
+            min = 3,
+            max = 20,
+            message = "Postal code must be between 3 and 20 characters"
+    )
     @Pattern(
-            regexp = "^[1-9][0-9]{5}$",
-            message = "Postal code must be a valid 6-digit Indian PIN code"
+            regexp = "^[A-Za-z0-9][A-Za-z0-9 -]*[A-Za-z0-9]$",
+            message = "Postal code may contain letters, numbers, spaces and hyphens"
     )
     private String postalCode;
 
